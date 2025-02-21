@@ -58,7 +58,7 @@ app.all('/api/shorturl(/:shorturl)?', async function(req, res) {
     }
 }
 
-if (isValidURL(body_url)) {
+// if (isValidURL(body_url)) {
 
   if (short_url) {
 
@@ -87,11 +87,11 @@ if (isValidURL(body_url)) {
 
         })
   }
-} else {
-  res.json({
-    error: 'Invalid URL'
-  })
-}
+// } else {
+//   res.json({
+//     error: 'Invalid URL'
+//   })
+// }
 
 })
 
