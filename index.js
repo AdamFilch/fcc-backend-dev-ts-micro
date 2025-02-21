@@ -4,7 +4,19 @@
 // init project
 var express = require('express');
 var app = express();
+const bodyParser = require('body-parser');
 
+// database init
+const sqlite3 = require('sqlite3').verbose()
+const db = new sqlite3.Database('./fcc-backend-db.db')
+
+// Import Services
+var db_service = require('./db-service')
+
+
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json())
 app.set('trust proxy', true); 
 // enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
 // so that your API is remotely testable by FCC 
@@ -30,21 +42,66 @@ app.get("/api/hello", function (req, res) {
   res.json({greeting: 'hello API'});
 });
 
+
+// URL Shorterner
+app.all('/api/shorturl(/:shorturl)?', async function(req, res) {
+
+  short_url = req.params.shorturl
+  body_url = req.body.url
+
+  function isValidURL(url) {
+    try {
+        new URL(url); // Throws error if invalid
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+if (isValidURL(body_url)) {
+
+  if (short_url) {
+
+    db.get('SELECT * FROM SHORTURL_T WHERE id=(?)',[short_url], (err, row) => {
+      if (err) {
+          res.status(400).json({"error":err.message});
+          return;
+        }
+        res.redirect(row.originalurl)
+    })
+
+  } else {
+
+    db.run('INSERT INTO SHORTURL_T (originalurl) VALUES (?)', [body_url], function(err) {
+            if(err) {
+
+              res.status(400).json({"error":err.message});
+              return;
+            } else {
+              console.log('Inserted ID:', this.lastID);
+              res.send({
+                original_url: body_url,
+                short_url: this.lastID
+              })
+            }
+
+        })
+  }
+} else {
+  res.json({
+    error: 'Invalid URL'
+  })
+}
+
+})
+
+
+// Header Parser Microservice
 app.get('/api/whoami', function(req, res) {
 
   ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress
   language = req.headers['accept-language']
   software = req.headers['user-agent']
-
-  // res.json({
-  //   test: 'lol'
-  // })
-
-  console.log('ResultChanges', {
-    "ipaddress": ip_address,
-    "language": language,
-    "software": software
-  })
 
   res.json({
     "ipaddress": ip_address,
@@ -95,7 +152,21 @@ app.get("/api/:date?", function (req, res) {
 }) 
 
 
-
+// Initialize Db and Table if it does not exist
+db.serialize(() => {
+  db.run(`
+      CREATE TABLE IF NOT EXISTS SHORTURL_T (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          originalurl TEXT
+      )
+  `, (err) => {
+      if (err) {
+          console.error('Error creating table:', err.message);
+      } else {
+          console.log('Table created or already exists.');
+      }
+  });
+});
 
 
 
