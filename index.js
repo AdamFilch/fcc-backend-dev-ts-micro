@@ -49,29 +49,32 @@ app.all('/api/shorturl(/:shorturl)?', async function(req, res) {
   short_url = req.params.shorturl
   body_url = req.body.url
 
-  function isValidURL(url) {
+  function isValidHttpUrl(string) {
+    let url;
+    
     try {
-        new URL(url); // Throws error if invalid
-        return true;
-    } catch (error) {
-        return false;
+      url = new URL(string);
+    } catch (_) {
+      return false;  
     }
-}
+  
+    return url.protocol === "http:" || url.protocol == 'https:';
+  }
 
-// if (isValidURL(body_url)) {
-
+  
   if (short_url) {
 
     db.get('SELECT * FROM SHORTURL_T WHERE id=(?)',[short_url], (err, row) => {
       if (err) {
-          res.status(400).json({"error":err.message});
-          return;
-        }
-        res.redirect(row.originalurl)
+        res.status(400).json({"error":err.message});
+        return;
+      }
+      res.redirect(row.originalurl)
     })
-
+    
   } else {
-
+    
+    if (isValidHttpUrl(body_url)) {
     db.run('INSERT INTO SHORTURL_T (originalurl) VALUES (?)', [body_url], function(err) {
             if(err) {
 
@@ -86,12 +89,12 @@ app.all('/api/shorturl(/:shorturl)?', async function(req, res) {
             }
 
         })
+      } else {
+        res.json({
+          error: 'Invalid URL'
+        })
+      }
   }
-// } else {
-//   res.json({
-//     error: 'Invalid URL'
-//   })
-// }
 
 })
 
