@@ -43,6 +43,19 @@ app.get("/api/hello", function (req, res) {
 });
 
 
+app.post('/api/users(/:id/exercises)?', async function(req, res) {
+
+})
+
+app.post('/api/users/:id/logs', async function (req, res) {
+
+})
+
+app.post('/api/fileanalyse',  async function(req, res) {
+
+})
+
+
 // URL Shorterner
 app.all('/api/shorturl(/:shorturl)?', async function(req, res) {
 
