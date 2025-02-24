@@ -3,8 +3,11 @@
 
 // init project
 var express = require('express');
+var multer = require('multer')
+var path = require('path')
 var app = express();
 const bodyParser = require('body-parser');
+const upload = multer({ storage: multer.memoryStorage() })
 
 // database init
 const sqlite3 = require('sqlite3').verbose()
@@ -12,6 +15,7 @@ const db = new sqlite3.Database('./fcc-backend-db.db')
 
 // Import Services
 var db_service = require('./db-service')
+app.use(express.static(path.join(__dirname, 'public')));
 
 
 
@@ -21,6 +25,7 @@ app.set('trust proxy', true);
 // enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
 // so that your API is remotely testable by FCC 
 var cors = require('cors');
+const { memoryStorage } = require('multer');
 app.use(cors({optionsSuccessStatus: 200}));  // some legacy browsers choke on 204
 
 // http://expressjs.com/en/starter/static-files.html
@@ -48,11 +53,15 @@ app.post('/api/users(/:id/exercises)?', async function(req, res) {
 })
 
 app.post('/api/users/:id/logs', async function (req, res) {
-
 })
 
-app.post('/api/fileanalyse',  async function(req, res) {
+app.post('/api/fileanalyse', upload.single('upfile'), (req, res) => {
 
+  res.json({
+    name: req.file.originalname,
+    type: req.file.mimetype,
+    size: req.file.size
+  })
 })
 
 

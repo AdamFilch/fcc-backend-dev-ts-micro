@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head></head>
+
+<body>
+    <div>Hello world</div>
+
+
+    <form id="uploadForm">
+        <span>POST /api/fileanalyse</span>
+        <br>
+        <input type="file" name="upfile" id="fileInput" required />
+        <button type="submit">Upload File</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById("uploadForm").addEventListener("submit", async function (event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const fileInput = document.getElementById("fileInput").files[0];
+
+            if (!fileInput) {
+                alert("Please select a file to upload.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("upfile", fileInput);
+
+            try {
+                const response = await fetch("/api/fileanalyse", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Display response
+                document.getElementById("result").innerHTML = `
+                    <h3>File Metadata</h3>
+                    <p><strong>Name:</strong> ${result.name}</p>
+                    <p><strong>Type:</strong> ${result.type}</p>
+                    <p><strong>Size:</strong> ${result.size} bytes</p>
+                `;
+            } catch (error) {
+                console.error("Error uploading file:", error);
+                alert("Error uploading file. Please try again.");
+            }
+        });
+    </script>
+
+    <div>
+        <span>Exercise Tracker</span>
+
+        <form>
+            <div>
+                <span>Create a User</span>
+                <span>POST /api/users</span>
+            </div>
+            <div>
+                <div>
+                    <label>Enter Username</label>
+                    <input type="text" />
+                </div>
+                <button>Submit User</button>
+            </div>
+        </form>
+
+        <form>
+            <div>
+                <span>Add Exercise</span>
+                <span>POST /api/users/:id/exercise</span>
+            </div>
+            <div>
+                <div>
+                    <label>Enter id</label>
+                    <input type="text" />
+                </div>
+                <div>
+                    <label>Enter Description</label>
+                    <input type="text" />
+                </div>
+                <div>
+                    <label>Enter Duration (mins)</label>
+                    <input type="text" />
+                </div>
+                <div>
+                    <label>Enter Date (yyyy-mm-dd)</label>
+                    <input type="text" />
+                </div>
+                <button>Submit Exercise</button>
+            </div>
+        </form>
+
+
+    </div>
+
+</body>
+
+</html>
