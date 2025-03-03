@@ -4,6 +4,8 @@
 // init project
 var express = require('express');
 var multer = require('multer')
+var { promisify } = require('util')
+var { format } = require('date-fns')
 var path = require('path')
 var app = express();
 const bodyParser = require('body-parser');
@@ -26,10 +28,14 @@ app.set('trust proxy', true);
 // so that your API is remotely testable by FCC 
 var cors = require('cors');
 const { memoryStorage } = require('multer');
+const e = require('express');
 app.use(cors({ optionsSuccessStatus: 200 }));  // some legacy browsers choke on 204
 
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
+
+
+const dbGet = promisify(db.get.bind(db))
 
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (req, res) {
@@ -40,13 +46,10 @@ app.get("/", function (req, res) {
   return res.json({ unix: res_unix, utc: res_utc })
 });
 
-
-
 // your first API endpoint... 
 app.get("/api/hello", function (req, res) {
   res.json({ greeting: 'hello API' });
 });
-
 
 
 app.all('/api/users', async function (req, res) {
@@ -58,7 +61,7 @@ app.all('/api/users', async function (req, res) {
           res.status(400).json({ "error": err.message });
           return;
         }
-        res.send({
+        res.json({
           username: username,
           _id: this.lastID
         })
@@ -70,14 +73,63 @@ app.all('/api/users', async function (req, res) {
         res.status(400).json({ "error": err.message });
         return;
       }
-      res.json(row)
+      res.send(row)
     })
   }
 })
 
-app.all('/api/users/:id/logs', async function (req, res) {
+
+app.post('/api/users/:_id/exercises', async function (req, res) {
+  if (!req.body.id) {
+    const user_id = req.params._id
+    const description = req.body.description
+    const duration = req.body.duration
+    let date = req.body.date
+    let username = 'adam'
+
+
+    user = await dbGet('SELECT * FROM USER_T where _id=(?)', [user_id], function (err, row) {
+      if (err) {
+        res.status(400).json({ "error": err.message });
+        return;
+      } else {
+        return row
+      }
+    })
+
+    function formatDate(date) {
+      let ts = date;
+      if (!ts) ts = new Date();
+      const d = typeof ts === "string" ? new Date(ts) : ts;
+
+      if (isNaN(d.getTime())) return "";
+
+      return format(d, "EEE MMM dd yyyy");
+    }
+
+    const returnResp = {
+      '_id': user_id,
+      'username': user.username,
+      'date': formatDate(date),
+      'duration': duration,
+      'description': description
+    }
+
+    console.log('BoilerPlateProject', returnResp)
+
+    res.json(returnResp)
+
+  }
 })
 
+app.all('/api/users/:id/logs', async function (req, res) {
+
+  res.json({
+    ok: false
+  })
+})
+
+// File metadata microservice
 app.post('/api/fileanalyse', upload.single('upfile'), (req, res) => {
 
   res.json({
@@ -86,7 +138,6 @@ app.post('/api/fileanalyse', upload.single('upfile'), (req, res) => {
     size: req.file.size
   })
 })
-
 
 // URL Shorterner
 app.all('/api/shorturl(/:shorturl)?', async function (req, res) {
@@ -142,7 +193,6 @@ app.all('/api/shorturl(/:shorturl)?', async function (req, res) {
   }
 
 })
-
 
 // Header Parser Microservice
 app.get('/api/whoami', function (req, res) {
