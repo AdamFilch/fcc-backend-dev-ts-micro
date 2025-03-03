@@ -14,6 +14,7 @@ DB Actions
 
 3 Total Tables
 
+```
 CREATE TABLE SHORTURL_T (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     originalurl text
@@ -33,3 +34,4 @@ CREATE TABLE IF NOT EXISTS EXERCISE_T (
           user_id INTEGER,
           FOREIGN KEY (user_id) REFERENCES USER_T(_id)
 );
+```
