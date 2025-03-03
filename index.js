@@ -53,7 +53,7 @@ app.get("/api/hello", function (req, res) {
 });
 
 
-
+// Exercise Tracker 
 app.post('/api/users',  async function (req, res) {
     if (!req.params.id) { // If Id is undefined therefore its a new registration
       const username = req.body.username
@@ -70,7 +70,7 @@ app.post('/api/users',  async function (req, res) {
     }}
   )
   
-
+// Exercise Tracker 
 app.get('/api/users', async function (req, res) {
   try {
     const users = await dbGetAll('SELECT _id, username FROM USER_T')
@@ -100,6 +100,7 @@ function formatDate(date) {
   return format(d, "EEE MMM dd yyyy");
 }
 
+// Exercise Tracker 
 app.post('/api/users/:_id/exercises', async function (req, res) {
   if (!req.body.id) {
     const user_id = req.params._id
@@ -139,6 +140,7 @@ app.post('/api/users/:_id/exercises', async function (req, res) {
   }
 })
 
+// Exercise Tracker
 app.all('/api/users/:_id/logs', async function (req, res) {
 
   const user_id = req.params._id
