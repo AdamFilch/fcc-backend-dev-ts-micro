@@ -53,8 +53,8 @@ app.get("/api/hello", function (req, res) {
 });
 
 
-app.all('/api/users', async function (req, res) {
-  if (req.method === 'POST') {
+
+app.post('/api/users',  async function (req, res) {
     if (!req.params.id) { // If Id is undefined therefore its a new registration
       const username = req.body.username
       db.run('INSERT OR REPLACE INTO USER_T (username) VALUES (?)', [username], function (err) {
@@ -67,21 +67,28 @@ app.all('/api/users', async function (req, res) {
           _id: `${this.lastID}`
         })
       })
-    }
-  } else {
-    try {
-      const users = await dbGetAll('SELECT _id, username FROM USER_T')
-      if (!users.length) {
-        return res.json([]); // Return an empty array if no users found
-      }
+    }}
+  )
+  
 
-      res.json(users);
-    } catch (error) {
-      console.error("Database error:", error);
-      res.status(500).json({ error: "Internal Server Error" });
+app.get('/api/users', async function (req, res) {
+  try {
+    const users = await dbGetAll('SELECT _id, username FROM USER_T')
+    if (!users.length) {
+      return res.json([]); // Return an empty array if no users found
     }
+
+    res.json(users.map((usr) => {
+      return {
+        username: usr.username,
+        _id: `${usr._id}`
+      }
+    }));
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
 function formatDate(date) {
   let ts = date;
