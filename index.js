@@ -36,6 +36,7 @@ app.use(express.static('public'));
 
 
 const dbGet = promisify(db.get.bind(db))
+const dbGetAll = promisify(db.all.bind(db))
 
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (req, res) {
@@ -56,14 +57,14 @@ app.all('/api/users', async function (req, res) {
   if (req.method === 'POST') {
     if (!req.params.id) { // If Id is undefined therefore its a new registration
       const username = req.body.username
-      db.run('INSERT INTO USER_T (username) VALUES (?)', [username], function (err) {
+      db.run('INSERT OR REPLACE INTO USER_T (username) VALUES (?)', [username], function (err) {
         if (err) {
           res.status(400).json({ "error": err.message });
           return;
         }
         res.json({
           username: username,
-          _id: this.lastID
+          _id: `${this.lastID}`
         })
       })
     }
@@ -78,6 +79,15 @@ app.all('/api/users', async function (req, res) {
   }
 })
 
+function formatDate(date) {
+  let ts = date;
+  if (!ts) ts = new Date();
+  const d = typeof ts === "string" ? new Date(ts) : ts;
+
+  if (isNaN(d.getTime())) return "";
+
+  return format(d, "EEE MMM dd yyyy");
+}
 
 app.post('/api/users/:_id/exercises', async function (req, res) {
   if (!req.body.id) {
@@ -87,7 +97,9 @@ app.post('/api/users/:_id/exercises', async function (req, res) {
     let date = req.body.date
     let username = 'adam'
 
-
+    if (!date) {
+      date = new Date()
+    }
     user = await dbGet('SELECT * FROM USER_T where _id=(?)', [user_id], function (err, row) {
       if (err) {
         res.status(400).json({ "error": err.message });
@@ -97,35 +109,45 @@ app.post('/api/users/:_id/exercises', async function (req, res) {
       }
     })
 
-    function formatDate(date) {
-      let ts = date;
-      if (!ts) ts = new Date();
-      const d = typeof ts === "string" ? new Date(ts) : ts;
+    db.run('INSERT INTO EXERCISE_T (user_id,date,duration,description) VALUES (?, ?, ?, ?)', [user_id, date, duration, description], function (err) {
+      if (err) {
+        res.status(400).json({ "error": err.message });
+        return;
+      }
+      const responseTest = {
+        '_id': user_id,
+        'username': user.username,
+        'date': formatDate(new Date(date)),
+        'duration': parseInt(duration),
+        'description': description
+      }
 
-      if (isNaN(d.getTime())) return "";
-
-      return format(d, "EEE MMM dd yyyy");
-    }
-
-    const returnResp = {
-      '_id': user_id,
-      'username': user.username,
-      'date': formatDate(date),
-      'duration': duration,
-      'description': description
-    }
-
-    console.log('BoilerPlateProject', returnResp)
-
-    res.json(returnResp)
+      res.json(responseTest)
+    })
 
   }
 })
 
-app.all('/api/users/:id/logs', async function (req, res) {
+app.all('/api/users/:_id/logs', async function (req, res) {
+
+  const user_id = req.params._id
+
+
+  exercises = await dbGetAll('SELECT * FROM EXERCISE_T where user_id=(?)', [user_id])
+
+  user = await dbGetAll('SELECT * FROM USER_T where _id=(?)', [user_id])
 
   res.json({
-    ok: false
+    username: user.username,
+    count: exercises.length,
+    _id: user_id,
+    log: exercises.map((exc) => {
+      return {
+        description: exc.description,
+        duration: parseInt(exc.duration),
+        date: formatDate(new Date(exc.date))
+      }
+    })
   })
 })
 
@@ -276,7 +298,6 @@ db.serialize(() => {
           description TEXT,
           duration TEXT,
           date DATE,
-          username TEXT,
           user_id INTEGER,
           FOREIGN KEY (user_id) REFERENCES USER_T(_id)
       );`, (err) => {
@@ -287,10 +308,8 @@ db.serialize(() => {
 
 
 
-
-
 // Listen on port set in environment variable or default to 3000
-var listener = app.listen(process.env.PORT || 3000, function () {
+var listener = app.listen(process.env.PORT || 4529, function () {
   console.log('Your app is listening on port ' + listener.address().port);
   console.log("Using database file:", db.filename);
 
