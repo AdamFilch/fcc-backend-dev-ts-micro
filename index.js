@@ -69,13 +69,17 @@ app.all('/api/users', async function (req, res) {
       })
     }
   } else {
-    db.all('SELECT * FROM USER_T', (err, row) => {
-      if (err) {
-        res.status(400).json({ "error": err.message });
-        return;
+    try {
+      const users = await dbGetAll('SELECT _id, username FROM USER_T')
+      if (!users.length) {
+        return res.json([]); // Return an empty array if no users found
       }
-      res.send(row)
-    })
+
+      res.json(users);
+    } catch (error) {
+      console.error("Database error:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
   }
 })
 
@@ -132,8 +136,31 @@ app.all('/api/users/:_id/logs', async function (req, res) {
 
   const user_id = req.params._id
 
+  let { from, to, limit } = req.query;
 
-  exercises = await dbGetAll('SELECT * FROM EXERCISE_T where user_id=(?)', [user_id])
+  let query = 'SELECT * FROM EXERCISE_T WHERE user_id = ?';
+  let queryParams = [user_id];
+
+  if (from && to) {
+    query += ' AND date BETWEEN ? AND ?';
+    queryParams.push(from, to);
+  } else if (from) {
+    query += ' AND date >= ?';
+    queryParams.push(from);
+  } else if (to) {
+    query += ' AND date <= ?';
+    queryParams.push(to);
+  }
+
+  query += ' ORDER BY date ASC'; // Order results by date
+
+  if (limit) {
+    query += ' LIMIT ?';
+    queryParams.push(parseInt(limit));
+  }
+
+
+  exercises = await dbGetAll(query, queryParams)
 
   user = await dbGetAll('SELECT * FROM USER_T where _id=(?)', [user_id])
 
